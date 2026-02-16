@@ -1,0 +1,45 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.2, pytest-7.4.4, pluggy-1.0.0 -- /opt/homebrew/anaconda3/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/apple/multi-code-agent/sessions/session_20260216_130350/workspace
+plugins: anyio-4.11.0
+collecting ... collected 36 items
+
+tests.py::test_simple_palindrome_returns_true PASSED                     [  2%]
+tests.py::test_simple_non_palindrome_returns_false PASSED                [  5%]
+tests.py::test_single_character_is_palindrome PASSED                     [  8%]
+tests.py::test_two_same_chars_is_palindrome PASSED                       [ 11%]
+tests.py::test_two_different_chars_not_palindrome PASSED                 [ 13%]
+tests.py::test_even_length_palindrome PASSED                             [ 16%]
+tests.py::test_odd_length_palindrome PASSED                              [ 19%]
+tests.py::test_mixed_case_palindrome PASSED                              [ 22%]
+tests.py::test_all_uppercase_palindrome PASSED                           [ 25%]
+tests.py::test_mixed_case_non_palindrome PASSED                          [ 27%]
+tests.py::test_phrase_with_punctuation_and_spaces PASSED                 [ 30%]
+tests.py::test_phrase_with_question_mark PASSED                          [ 33%]
+tests.py::test_phrase_with_apostrophe PASSED                             [ 36%]
+tests.py::test_phrase_with_contractions PASSED                           [ 38%]
+tests.py::test_string_with_only_spaces PASSED                            [ 41%]
+tests.py::test_string_with_only_punctuation PASSED                       [ 44%]
+tests.py::test_string_with_numbers PASSED                                [ 47%]
+tests.py::test_string_with_mixed_alnum PASSED                            [ 50%]
+tests.py::test_empty_string_is_palindrome PASSED                         [ 52%]
+tests.py::test_strict_mode_simple_palindrome PASSED                      [ 55%]
+tests.py::test_strict_mode_case_sensitive_not_palindrome PASSED          [ 58%]
+tests.py::test_strict_mode_space_matters PASSED                          [ 61%]
+tests.py::test_strict_mode_empty_string PASSED                           [ 63%]
+tests.py::test_strict_mode_single_char PASSED                            [ 66%]
+tests.py::test_strict_mode_punctuation_matters PASSED                    [ 69%]
+tests.py::test_strict_mode_numeric_palindrome PASSED                     [ 72%]
+tests.py::test_strict_mode_non_palindrome_number PASSED                  [ 75%]
+tests.py::test_raises_type_error_for_integer PASSED                      [ 77%]
+tests.py::test_raises_type_error_for_none PASSED                         [ 80%]
+tests.py::test_raises_type_error_for_list PASSED                         [ 83%]
+tests.py::test_raises_type_error_for_bytes PASSED                        [ 86%]
+tests.py::test_type_error_message_includes_type_name PASSED              [ 88%]
+tests.py::test_unicode_palindrome PASSED                                 [ 91%]
+tests.py::test_unicode_non_palindrome PASSED                             [ 94%]
+tests.py::test_string_with_emoji_only PASSED                             [ 97%]
+tests.py::test_whitespace_only_variants PASSED                           [100%]
+
+============================== 36 passed in 0.01s ==============================
