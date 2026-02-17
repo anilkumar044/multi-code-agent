@@ -9,6 +9,21 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+
+
+_FALLBACK_TRIGGERS = frozenset([
+    "error_max_tokens",          # Claude JSON subtype
+    "context_length_exceeded",   # OpenAI error code
+    "maximum context length",    # OpenAI message
+    "prompt is too long",
+    "resource_exhausted",        # Gemini gRPC status
+    "model_capacity_exhausted",  # Gemini metadata
+    "no capacity available",     # Gemini human message
+    "rate limit exceeded",
+    "too many requests",
+    "context window",
+])
 
 
 class AgentError(Exception):
@@ -27,6 +42,16 @@ class EmptyResponseError(AgentError):
     pass
 
 
+class TokenLimitError(AgentError):
+    """Token/context limit or model capacity exhausted — triggers model fallback."""
+
+
+@dataclass
+class AgentResponse:
+    text: str
+    session_id: str = ""
+
+
 class BaseAgent(ABC):
     """
     Abstract agent backed by an external CLI tool.
@@ -34,7 +59,7 @@ class BaseAgent(ABC):
     Concrete subclasses define:
       ROLE:  human-readable role name ("Creator", "Reviewer", "Critic")
       COLOR: rich style string ("cyan", "green", "magenta")
-      build_command(prompt): returns the argv list to pass to subprocess
+      build_command(prompt, model, session_id): returns the argv list to pass to subprocess
     """
 
     ROLE: str = "Agent"
@@ -44,20 +69,62 @@ class BaseAgent(ABC):
         self.cli = cli
         self.timeout = timeout
         self.display = display
+        self._session_id: str = ""            # populated after first successful call
+        self._current_model: str = ""         # set by subclass __init__
+        self._fallback_models: list[str] = [] # set by subclass __init__
 
     @abstractmethod
-    def build_command(self, prompt: str) -> list[str]:
+    def build_command(self, prompt: str, model: str = "", session_id: str = "") -> list[str]:
         """Return the argv list for subprocess.run(). Prompt is a CLI argument."""
         ...
 
+    def parse_output(self, raw: str) -> AgentResponse:
+        """Parse raw CLI output. Default checks for fallback triggers in raw text."""
+        if any(t in raw.lower() for t in _FALLBACK_TRIGGERS):
+            raise TokenLimitError(f"{self.ROLE} ({self.cli}) hit token/capacity limit")
+        return AgentResponse(text=raw)
+
+    def _get_model_chain(self) -> list[str]:
+        chain = [self._current_model] if self._current_model else [""]
+        for m in self._fallback_models:
+            if m not in chain:
+                chain.append(m)
+        return chain
+
     def run(self, prompt: str, cwd: "Path | None" = None) -> str:
         """Execute the CLI tool with the given prompt and return its response."""
-        cmd = self.build_command(prompt)
+        models = self._get_model_chain()
+        last_exc: Exception = EmptyResponseError(f"{self.ROLE} produced no output")
+        for i, model in enumerate(models):
+            is_retry = i > 0
+            # On fallback: fresh session (different model cannot resume prior session)
+            sid = "" if is_retry else self._session_id
+            if is_retry:
+                self.display.error(
+                    f"{self.ROLE} ({self.cli}): {models[i-1] or 'default'} hit limit "
+                    f"— retrying with {model or 'default'}"
+                )
+            try:
+                cmd = self.build_command(prompt, model=model, session_id=sid)
+                raw = self._execute(cmd, cwd)
+                response = self.parse_output(raw)
+                if response.session_id:
+                    self._session_id = response.session_id
+                if model:
+                    self._current_model = model
+                return response.text
+            except TokenLimitError as exc:
+                last_exc = exc
+                if i < len(models) - 1:
+                    continue
+                raise
+            except AgentError:
+                raise
+        raise last_exc
 
-        # Strip CLAUDECODE so claude can be invoked as a subprocess from inside
-        # an existing Claude Code session (which would otherwise block it).
+    def _execute(self, cmd: list[str], cwd) -> str:
+        """Clean subprocess execution — no fallback detection."""
         env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-
         try:
             result = subprocess.run(
                 cmd,
